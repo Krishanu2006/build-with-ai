@@ -1,0 +1,178 @@
+# CivicSignal — Multilingual Civic Intelligence Platform (MVP)
+
+A multilingual civic intelligence platform that transforms fragmented citizen voice and text requests into structured, geographically contextualized, explainable evidence for public-sector planning.
+
+## Reconciled Contradictions & MVP Baseline
+
+From reviewing [PRD.md](file:///d:/Desktop/Build-With-AI/PRD.md), [FSD.md](file:///d:/Desktop/Build-With-AI/FSD.md), [Design.md](file:///d:/Desktop/Build-With-AI/Design.md), and [TAD.md](file:///d:/Desktop/Build-With-AI/TAD.md), along with user requirements, the following contradictions are reconciled:
+
+| Topic | Documents Baseline | User Prompt / Agreed Direction | Resolution for MVP |
+|---|---|---|---|
+| **Backend & Database** | TAD/PRD specify Python FastAPI + MongoDB for intake and aggregation. | "Backend: Not required for v1", "Data: Local JSON/mock data initially". PRD SC-08 explicitly requires full demo path without live external dependencies. | Implement a **client-side React application** powered by a typed local mock service layer (`src/services/mockDataStore.ts`) implementing all entity schemas (`DE-001` through `DE-008`) and API contracts (`API-001` through `API-008`). It simulates async ingestion pipeline state transitions (`received` → `transcribed` → `extracted` → `geolocated`). |
+| **Styling** | FSD/Design propose CSS custom properties (`tokens.css`) with utility CSS allowed if faster. | "Styling: Tailwind CSS" | Use **Tailwind CSS** configured with the exact design tokens from [Design.md](file:///d:/Desktop/Build-With-AI/Design.md) §4 (primary `#1F4E79`, primary-hover `#173C5E`, secondary `#2D7D6E`, surface `#FFFFFF`, background `#F6F7F9`, surface-alt `#EEF1F5`, text `#16202B`, text-muted `#5A6673`, border `#D7DDE4`, and the 5-step intensity ramp `#E3ECF4` through `#2D6193`). |
+| **Charts** | FSD proposed inline SVG/CSS bars. | "Charts: Recharts" | Use **Recharts** to render category distributions, severity distributions, and context indicators in the evidence panel and dashboard while ensuring all figures also appear in tabular text for accessibility. |
+| **Map** | Leaflet with OpenStreetMap tiles. | "Map: Leaflet" | Use **Leaflet** / **React Leaflet** with OpenStreetMap tiles, rendering GeoJSON polygons for demo geography areas shaded with the 5-step intensity ramp, centroid marker fallback, tooltips, legend, and bidirectional list synchronization. |
+| **Demo Geography & Languages** | PRD A-02/A-03 left specific region and 2–3 languages as TBD; PRD DEP-016 discusses JJM (Jal Jeevan Mission). | 1 cohesive region with 2–3 languages. | Demo geography: **Bengaluru Urban District** with 28 representative administrative zones/taluks (e.g. Mahadevapura, Yelahanka, Bommanahalli, Anekal, Bangalore South, RR Nagar, Kengeri, Whitefield, etc.). Supported languages: **English**, **Kannada (ಕನ್ನಡ)**, and **Hindi (हिन्दी)**. |
+| **Guardrails & Constraints** | PRD/FSD/Design/TAD core principles. | Must be strictly honored. | 1. **Decision support only**: Candidate interventions are strictly labelled as non-authoritative suggestions requiring human decision. No autonomous ranking or policy execution.<br>2. **No opaque composite AI score**: Surfaced areas show only observable, decomposed evidence signals (request counts, category shares, severity, density).<br>3. **Visible provenance**: Every context indicator shows its provenance tag (`Public`, `Synthetic`, `Curated`, or `Unavailable`). Unverified datasets (such as JJM investment) explicitly carry `TBD / requires verification` and are never faked as live integrations. |
+
+---
+
+## User Review Required
+
+> [!IMPORTANT]
+> **No Backend Required for v1**: The app will run entirely in the browser with an in-memory and `localStorage`-backed service layer simulating the full asynchronous pipeline (`POST /api/requests`, `GET /api/requests/:id`, `GET /api/hotspots`, `GET /api/hotspots/:id/evidence`, etc.). New citizen requests submitted through the UI will be saved in local storage, processed asynchronously, and immediately reflected on the live dashboard and map.
+
+> [!NOTE]
+> **Voice Recording in Browser**: The voice intake uses the standard HTML5 `MediaRecorder` API. In environments where microphone permission is denied or unsupported, the interface immediately and gracefully offers the text intake option without crashing, strictly satisfying AC-004.
+
+---
+
+## Proposed Changes
+
+We will initialize the Vite + React + TypeScript project directly in the workspace root `d:\Desktop\Build-With-AI` with Tailwind CSS, Leaflet, and Recharts, preserving existing Markdown documentation.
+
+### Component Structure & Architecture
+
+```
+d:/Desktop/Build-With-AI/
+├── index.html
+├── package.json
+├── tsconfig.json
+├── vite.config.ts
+├── tailwind.config.js
+├── postcss.config.js
+└── src/
+    ├── main.tsx
+    ├── App.tsx                     # Router + providers (Toast, Announcer)
+    ├── routes.tsx
+    ├── index.css                   # Tailwind directives + design token root
+    ├── types/
+    │   └── domain.ts               # DE-001..DE-008 type definitions (CitizenRequest, Hotspot, etc.)
+    ├── services/
+    │   ├── mockData/
+    │   │   ├── areas.geo.json      # 28 Bengaluru areas GeoJSON polygons & centroids
+    │   │   ├── requests.json       # 120+ synthetic multilingual citizen requests (EN, KN, HI)
+    │   │   ├── context.json        # Census 2011, OSM infrastructure, unverified investment
+    │   │   └── taxonomy.json       # Supported languages, categories, severities
+    │   ├── mockDataStore.ts        # Client-side store simulating DB + aggregation pipeline
+    │   └── api.ts                  # Typed client reproducing API-001..API-008
+    ├── layouts/
+    │   ├── PublicLayout.tsx        # Mobile-first single-column layout for citizen intake (SCR-001, SCR-002)
+    │   ├── AnalystLayout.tsx       # Desktop-first analytical layout with header, provenance strip, filters (SCR-003, SCR-004)
+    │   └── BareLayout.tsx          # Documentation & static layout (SCR-005, SCR-006)
+    ├── components/
+    │   ├── primitives/             # Button, Field, Select, Badge, Spinner, EmptyState, ErrorState, ProvenanceTag
+    │   ├── common/
+    │   │   ├── Header.tsx          # Navigation bar with links and live status
+    │   │   ├── ProvenanceStrip.tsx # Notice stating data is synthetic demo data (DC-20)
+    │   │   ├── A11yAnnouncer.tsx   # ARIA live-region announcer (FC-016)
+    │   │   └── ToastHost.tsx       # Transient notifications (FC-017)
+    │   ├── request/                # Citizen Intake (SCR-001, SCR-002)
+    │   │   ├── ModeToggle.tsx      # Speak / Type segmented control (DC-01)
+    │   │   ├── TextRequestInput.tsx# Free-text multi-line input (FC-002)
+    │   │   ├── VoiceRecorder.tsx   # MediaRecorder voice capture with audio controls (FC-003)
+    │   │   ├── LanguageSelector.tsx# Optional language picker (FC-004)
+    │   │   ├── LocationInput.tsx   # Free-text + area selector fallback (FC-005)
+    │   │   └── RequestStatusCard.tsx# "What we understood" interpretation card (FC-007)
+    │   ├── dashboard/              # Policymaker Dashboard (SCR-003)
+    │   │   ├── FilterBar.tsx       # Category, Severity, Area filters + URL sync (FC-008)
+    │   │   ├── HotspotMap.tsx      # Leaflet map with GeoJSON polygon shading & markers (FC-009)
+    │   │   ├── HotspotList.tsx     # Ranked keyboard-navigable list (FC-010)
+    │   │   └── MapLegend.tsx       # Shading intensity metric legend (FC-011)
+    │   └── evidence/               # Hotspot Detail (SCR-004)
+    │       ├── EvidencePanel.tsx   # "Why this region?" signalsUsed + unavailableSignals (FC-012)
+    │       ├── DistributionCharts.tsx # Recharts severity & category breakdown (DC-15)
+    │       ├── RequestEvidenceList.tsx# Collapsible citizen requests with translation toggle (FC-015)
+    │       ├── ContextPanel.tsx    # Demographics, infrastructure, unverified investment (FC-013)
+    │       └── InterventionList.tsx# Suggested candidate interventions with rationales (FC-014)
+    └── pages/
+        ├── CitizenRequestPage.tsx  # SCR-001 (/submit)
+        ├── SubmissionStatusPage.tsx# SCR-002 (/submit/:requestId)
+        ├── DashboardPage.tsx       # SCR-003 (/dashboard)
+        ├── MethodPage.tsx          # SCR-005 (/method)
+        └── NotFoundPage.tsx        # SCR-006 (*)
+```
+
+---
+
+## Detailed Screen Specifications
+
+### 1. Citizen Request Interface (`SCR-001` - `/submit`)
+- **Mode Toggle**: Segmented control between "Speak" and "Type".
+- **Text Mode**: Textarea for free-form citizen description.
+- **Voice Mode**: Accessible audio recorder leveraging the Web `MediaRecorder` API:
+  - Start recording, elapsed time display, audio waveform/level indicator, stop, preview playback, and re-record.
+  - Graceful fallback: If microphone permission is denied, shows clear explanatory alert and switches to text mode without page reload (AC-004).
+- **Optional Details**:
+  - Collapsible disclosure for "Add location or language (optional)".
+  - Language selector (Auto-detect, English, Kannada, Hindi).
+  - Location input with text hint and dropdown of reference areas.
+- **Submit Flow**:
+  - Validates input, shows "Sending..." busy spinner on button, saves request in `mockDataStore`.
+  - Begins simulated pipeline (`received` → `transcribed` → `extracted` → `geolocated`), immediately navigating to `SCR-002`.
+
+### 2. Submission Confirmation & Status (`SCR-002` - `/submit/:requestId`)
+- **Status Banner**: Confirms receipt with monospace copyable ID.
+- **Progress Stepper**: Displays pipeline stages in real-time.
+- **"What we understood" Card**:
+  - Displays transcript (with "Machine transcript" tag for voice requests).
+  - Detected language, extracted category, issue summary, severity, and resolved geographic area.
+  - Honest failure states: If extraction/geocoding is unresolved, plainly states so without fabricating guesses (AC-006, AC-009).
+- **Action Buttons**: "Submit another request" and "View on Dashboard".
+
+### 3. Policymaker Dashboard (`SCR-003` - `/dashboard`)
+- **Provenance Strip**: Prominently notes that displayed data is synthetic demo data (DG-03, DC-20).
+- **FilterBar**:
+  - Filters by Category (Water Supply, Roads & Transport, Sanitation, Healthcare, Electricity), Severity (High, Medium, Low), Area, and Time window.
+  - Shows live matching hotspot count and "Clear filters" action. Filter selections persist in the URL query string.
+- **Dual Map & Accessible List Views**:
+  - **Leaflet Map**: Renders Bengaluru Urban areas. GeoJSON polygons are shaded according to the 5-step intensity ramp (`#E3ECF4` to `#2D6193`). Hovering shows summary tooltip; clicking an area selects the hotspot and highlights the list row. Centroid marker fallback for areas lacking geometry.
+  - **Map Legend**: Explains the metric ("Citizen requests per area") and the 5-step threshold scale.
+  - **Hotspot List**: Accessible keyboard-navigable ranked list (`FC-010`). Each item displays rank, area name, total requests, dominant category badge, and mini severity indicator.
+  - Selecting an area on either map or list docks the **Hotspot Detail Panel** (`SCR-004`).
+
+### 4. Hotspot Detail Panel (`SCR-004` - `/dashboard/hotspot/:hotspotId`)
+- Docks alongside the map on desktop; slides in as an overlay sheet on tablet and mobile.
+- Follows the required fixed reading order from [Design.md](file:///d:/Desktop/Build-With-AI/Design.md) §7.3–§7.5:
+  1. **"Why this region?" Evidence Breakdown (`FC-012`)**:
+     - Explicit signal table: Total requests, category share, high severity count, density score, population denominator.
+     - Recharts bar charts for category distribution and severity breakdown.
+     - **Signals Not Available Box**: Explicitly lists missing signals (e.g. "Public Investment: No verified data source available (TBD / requires verification)") — never omitted or replaced with zero (AC-013, AC-015).
+     - Method line: Explains the deterministic aggregation rule used.
+  2. **Contributing Citizen Requests (`FC-015`)**:
+     - Expandable list of underlying citizen requests.
+     - Displays original text (in English, Kannada, or Hindi), language badge, category/severity badges, machine transcript indicator, and an instant "Show translation" toggle.
+  3. **Contextual Indicators (`FC-013`)**:
+     - Demographics (Population, Density, Literacy) with Provenance pills (`Census 2011`, `Public`, `Synthetic`).
+     - Infrastructure gaps (Piped water coverage, PHC access).
+     - Investment tracking with prominent `TBD / requires verification` warning tag.
+  4. **Candidate Interventions (`FC-014`)**:
+     - Non-dismissible advisory banner: "Suggestions — requires human decision. The platform does not make policy decisions."
+     - Suggestion cards with rationale and chips linking back to motivating evidence signals.
+
+### 5. Method & Data Provenance (`SCR-005` - `/method`)
+- Formal documentation page explaining:
+  - System mission and decision-support boundaries (DG-04).
+  - Data sources table with provenance, vintage, and verification status.
+  - Deterministic aggregation algorithms vs. AI NLP extraction.
+  - Known limitations and accessibility commitments.
+
+---
+
+## Verification Plan
+
+### Automated Checks
+- `npm run build`: Verify TypeScript compilation, Vite bundle creation, zero type errors.
+- `npx eslint` / lint checks: Verify code hygiene and absence of `dangerouslySetInnerHTML`.
+
+### Browser Verification
+- Open the application in browser using `browser_subagent`.
+- Test Citizen Journey:
+  - Submit a text request in Kannada/Hindi/English. Verify redirection to `SCR-002` and live interpretation card rendering.
+  - Test voice recorder interaction and microphone permission fallback.
+- Test Policymaker Journey:
+  - Verify Leaflet map rendering with polygon shading and legend.
+  - Filter by category and severity; verify simultaneous map and list update.
+  - Click on a hotspot (e.g. Mahadevapura or Bommanahalli); verify detail panel opens with Recharts distribution charts, "Signals not available" notice, contributing requests with translation toggle, context indicators with provenance, and advisory candidate interventions.
+  - Verify keyboard accessibility (tab navigation, focus ring, skip link, escape to close panel).
+- Verify responsive layout at desktop (1440px), tablet (800px), and mobile (375px) viewports.

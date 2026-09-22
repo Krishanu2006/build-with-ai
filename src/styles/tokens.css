@@ -1,0 +1,44 @@
+:root {
+  /* Colour — brand & surface */
+  --color-primary: #1F4E79;
+  --color-primary-hover: #173C5E;
+  --color-secondary: #2D7D6E;
+  --color-background: #F6F7F9;
+  --color-surface: #FFFFFF;
+  --color-surface-alt: #EEF1F5;
+  --color-text: #16202B;
+  --color-text-muted: #5A6673;
+  --color-border: #D7DDE4;
+
+  /* Colour — status */
+  --color-success: #2E7D52;
+  --color-warning: #9A6512;
+  --color-error: #A62C2C;
+  --color-focus: #1F4E79;
+
+  /* Colour — data encoding */
+  --intensity-1: #E3ECF4;
+  --intensity-2: #B9CFE3;
+  --intensity-3: #89AECD;
+  --intensity-4: #5789B3;
+  --intensity-5: #2D6193;
+
+  --severity-low: var(--intensity-2);
+  --severity-medium: var(--intensity-4);
+  --severity-high: var(--intensity-5);
+
+  /* Typography */
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Layout */
+  --container-narrow: 640px;
+  --container-wide: 1440px;
+  --panel-width: 440px;
+  --header-height: 56px;
+
+  /* Motion */
+  --motion-fast: 120ms;
+  --motion-base: 200ms;
+  --easing: cubic-bezier(0.2, 0.0, 0.2, 1);
+}
